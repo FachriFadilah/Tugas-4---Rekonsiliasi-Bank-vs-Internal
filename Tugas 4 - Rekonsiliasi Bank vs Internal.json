@@ -1,0 +1,340 @@
+{
+  "name": "Tugas 4 - Rekonsiliasi Bank vs Internal",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        0
+      ],
+      "id": "d8e87097-825e-4cc0-8bca-0e9996105011"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1njLQq2P2RRFOB4ixPgikSZlYJYMmJcZzwigZXSEKO9A",
+          "mode": "list",
+          "cachedResultName": "Salinan dari transaksi internal",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1njLQq2P2RRFOB4ixPgikSZlYJYMmJcZzwigZXSEKO9A/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1njLQq2P2RRFOB4ixPgikSZlYJYMmJcZzwigZXSEKO9A/edit#gid=0"
+        },
+        "options": {}
+      },
+      "name": "Get Transaksi Internal (Sheets)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -96,
+        -144
+      ],
+      "id": "1c34f712-c22a-46c3-8e04-ec3b549d3a9a",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Q6FhntkGe5txI0W1",
+          "name": "Google Sheets account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1es6b75EIGD9sPZ2xoklnxPCR0MVB-Y_L",
+          "mode": "list",
+          "cachedResultName": "mutasi_bank.csv",
+          "cachedResultUrl": "https://drive.google.com/file/d/1es6b75EIGD9sPZ2xoklnxPCR0MVB-Y_L/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "name": "Download Mutasi Bank (Drive)",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -96,
+        144
+      ],
+      "id": "8ea72690-beb6-4b73-bb36-b346b6c0ed6d",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YA69pTxMrzV1f0Op",
+          "name": "Google Drive account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Extract CSV Bank",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        144,
+        144
+      ],
+      "id": "4277d746-68f7-4e81-8364-8513784f9d58"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pick = (j, keys) => { for (const k of keys) if (j[k] !== undefined && j[k] !== '') return j[k]; return ''; };\n\nfunction cleanDate(v) {\n  const s = String(v).trim().split(' ')[0].split('T')[0];\n  let r, d, m, y;\n  if ((r = s.match(/^(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})$/))) { y = r[1]; m = r[2]; d = r[3]; }\n  else if ((r = s.match(/^(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})$/))) { d = r[1]; m = r[2]; y = r[3]; }\n  else return null;\n  return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');\n}\n\nfunction cleanAmount(v) {\n  // buang desimal \",00\" / \".00\" dulu supaya tidak jadi 100x lipat\n  const s = String(v).replace(/[.,]\\d{2}$/, '');\n  return Number(s.replace(/[^0-9]/g, ''));\n}\n\n// GANTI / TAMBAH nama kolom sesuai header asli datamu\nconst DATE_COLS = ['Tanggal', 'tanggal', 'Date', 'date', 'Tanggal Transaksi'];\nconst AMOUNT_COLS = ['Nominal', 'nominal', 'Amount', 'amount', 'Jumlah', 'Kredit'];\n\nreturn $input.all().map(item => {\n  const j = item.json;\n  const cd = cleanDate(pick(j, DATE_COLS));\n  const ca = cleanAmount(pick(j, AMOUNT_COLS));\n  return { json: {\n    ...j,\n    source: 'INTERNAL',\n    cleanDate: cd,\n    cleanAmount: ca,\n    match_key: cd + '_' + ca\n  }};\n});"
+      },
+      "name": "Clean Internal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -144
+      ],
+      "id": "69e4b4ae-2849-486a-99f7-c5ed1fb4d0a0"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pick = (j, keys) => { for (const k of keys) if (j[k] !== undefined && j[k] !== '') return j[k]; return ''; };\n\nfunction cleanDate(v) {\n  const s = String(v).trim().split(' ')[0].split('T')[0];\n  let r, d, m, y;\n  if ((r = s.match(/^(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})$/))) { y = r[1]; m = r[2]; d = r[3]; }\n  else if ((r = s.match(/^(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})$/))) { d = r[1]; m = r[2]; y = r[3]; }\n  else return null;\n  return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');\n}\n\nfunction cleanAmount(v) {\n  // buang desimal \",00\" / \".00\" dulu supaya tidak jadi 100x lipat\n  const s = String(v).replace(/[.,]\\d{2}$/, '');\n  return Number(s.replace(/[^0-9]/g, ''));\n}\n\n// GANTI / TAMBAH nama kolom sesuai header asli datamu\nconst DATE_COLS = ['Tanggal', 'tanggal', 'Date', 'date', 'Tanggal Transaksi'];\nconst AMOUNT_COLS = ['Nominal', 'nominal', 'Amount', 'amount', 'Jumlah', 'Kredit'];\n\nreturn $input.all().map(item => {\n  const j = item.json;\n  const cd = cleanDate(pick(j, DATE_COLS));\n  const ca = cleanAmount(pick(j, AMOUNT_COLS));\n  return { json: {\n    ...j,\n    source: 'BANK',\n    cleanDate: cd,\n    cleanAmount: ca,\n    match_key: cd + '_' + ca\n  }};\n});"
+      },
+      "name": "Clean Bank",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        144
+      ],
+      "id": "cd116458-6e45-40b9-b9cd-2e35bc7f183a"
+    },
+    {
+      "parameters": {},
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "7a4bb75b-2503-4f5a-ae7f-fc2076ac991a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\nconst internal = items.filter(i => i.source === 'INTERNAL');\nconst bank = items.filter(i => i.source === 'BANK');\n\n// Map berbasis daftar agar transaksi kembar tidak salah cocok\nconst bankMap = new Map();\nbank.forEach(b => {\n  if (!bankMap.has(b.match_key)) bankMap.set(b.match_key, []);\n  bankMap.get(b.match_key).push(b);\n});\n\nconst results = [];\ninternal.forEach(r => {\n  const list = bankMap.get(r.match_key);\n  if (list && list.length) {\n    list.pop();\n    results.push({ ...r, status: 'Matched' });\n  } else {\n    results.push({ ...r, status: 'Missing in Bank' });\n  }\n});\n\nbankMap.forEach(list => list.forEach(b => {\n  results.push({ ...b, status: 'Unrecorded Internal' });\n}));\n\nreturn results.map(r => ({ json: r }));"
+      },
+      "name": "Reconcile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        0
+      ],
+      "id": "3027a3be-26c0-4555-a398-ebb97b1b547e"
+    },
+    {
+      "parameters": {
+        "jsCode": "const all = $input.all().map(i => i.json);\nconst diff = all.filter(i => i.status !== 'Matched');\nconst missing = diff.filter(i => i.status === 'Missing in Bank');\nconst unrec = diff.filter(i => i.status === 'Unrecorded Internal');\nconst fmt = r => '• ' + r.cleanDate + ' | Rp' + Number(r.cleanAmount).toLocaleString('id-ID');\n\nlet text = '⚠️ LAPORAN REKONSILIASI\\n';\ntext += 'Total transaksi: ' + all.length + ' | Matched: ' + (all.length - diff.length) + ' | Selisih: ' + diff.length + '\\n';\ntext += '\\n❌ Missing in Bank (' + missing.length + '):\\n' + (missing.map(fmt).join('\\n') || '-');\ntext += '\\n\\n❓ Unrecorded Internal (' + unrec.length + '):\\n' + (unrec.map(fmt).join('\\n') || '-');\n\nreturn [{ json: { diffCount: diff.length, text } }];"
+      },
+      "name": "Summary Selisih",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        0
+      ],
+      "id": "c1af21df-efa1-4a0c-9212-cfdd685b050d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cek-selisih",
+              "leftValue": "={{ $json.diffCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Ada Selisih?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        0
+      ],
+      "id": "3f958094-a971-451b-b70d-4f898146ebe2"
+    },
+    {
+      "parameters": {
+        "chatId": "6811087250",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "name": "Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1632,
+        -32
+      ],
+      "id": "b949dd11-a044-45af-986d-f1ddaece99ea",
+      "webhookId": "82130f83-349a-4040-8f0b-5d32e5664f16",
+      "credentials": {
+        "telegramApi": {
+          "id": "2P0JWv3yTB4mEWgW",
+          "name": "Telegram account 10"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Transaksi Internal (Sheets)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Download Mutasi Bank (Drive)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Transaksi Internal (Sheets)": {
+      "main": [
+        [
+          {
+            "node": "Clean Internal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Mutasi Bank (Drive)": {
+      "main": [
+        [
+          {
+            "node": "Extract CSV Bank",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CSV Bank": {
+      "main": [
+        [
+          {
+            "node": "Clean Bank",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Internal": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Bank": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Reconcile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reconcile": {
+      "main": [
+        [
+          {
+            "node": "Summary Selisih",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary Selisih": {
+      "main": [
+        [
+          {
+            "node": "Ada Selisih?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ada Selisih?": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "db47388f-e5f8-49ff-bd1e-63df85a3283c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dc96f10ae7dc95d3c138575ba243a0a167923dbcb524841d451aadf9135d5fb3"
+  },
+  "nodeGroups": [],
+  "id": "y5LRZd4ONux6C13h",
+  "tags": []
+}
